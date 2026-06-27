@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mudra AI — Bharatanatyam Hand Gesture Detector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500&family=Noto+Sans+Tamil&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --deep:    #0E0B0A;
+      --clay:    #C4622D;
+      --gold:    #D4A843;
+      --ivory:   #F5EFE6;
+      --muted:   #7A6A5A;
+      --surface: #1A1410;
+      --border:  rgba(212,168,67,0.18);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--deep);
+      color: var(--ivory);
+      font-family: 'Inter', sans-serif;
+      font-weight: 300;
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.2rem 3rem;
+      background: rgba(14,11,10,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--gold);
+      letter-spacing: 0.04em;
+    }
+    .nav-links { display: flex; gap: 2.5rem; }
+    .nav-links a {
+      color: var(--muted); font-size: 0.85rem; letter-spacing: 0.08em;
+      text-decoration: none; text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--ivory); }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      padding: 8rem 3rem 4rem;
+      gap: 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 80% at 80% 50%, rgba(196,98,45,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-text { position: relative; }
+    .hero-eyebrow {
+      font-size: 0.75rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--clay);
+      margin-bottom: 1.2rem;
+    }
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.8rem, 5vw, 4.5rem);
+      line-height: 1.1;
+      font-weight: 700;
+      margin-bottom: 0.4rem;
+    }
+    .hero-title em {
+      font-style: italic;
+      color: var(--gold);
+    }
+    .hero-tamil {
+      font-family: 'Noto Sans Tamil', sans-serif;
+      font-size: 1rem;
+      color: var(--muted);
+      margin-bottom: 2rem;
+      letter-spacing: 0.05em;
+    }
+    .hero-desc {
+      font-size: 1.05rem;
+      color: rgba(245,239,230,0.7);
+      max-width: 44ch;
+      margin-bottom: 2.5rem;
+    }
+    .hero-cta {
+      display: inline-block;
+      padding: 0.85rem 2.2rem;
+      background: var(--clay);
+      color: var(--ivory);
+      text-decoration: none;
+      font-size: 0.9rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: background 0.2s, transform 0.2s;
+      border-radius: 2px;
+    }
+    .hero-cta:hover { background: #d4703a; transform: translateY(-1px); }
+
+    .hero-visual {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mudra-ring {
+      width: 340px; height: 340px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .mudra-ring::before {
+      content: '';
+      position: absolute; inset: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(212,168,67,0.1);
+    }
+    .mudra-emoji { font-size: 7rem; filter: drop-shadow(0 0 40px rgba(212,168,67,0.3)); }
+
+    /* orbiting dots */
+    .orbit-dot {
+      position: absolute;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      animation: orbit 8s linear infinite;
+    }
+    .orbit-dot:nth-child(2) { animation-delay: -2.7s; background: var(--clay); }
+    .orbit-dot:nth-child(3) { animation-delay: -5.3s; }
+    @keyframes orbit {
+      from { transform: rotate(0deg) translateX(168px); }
+      to   { transform: rotate(360deg) translateX(168px); }
+    }
+
+    /* ── DEMO SECTION ── */
+    #demo {
+      padding: 6rem 3rem;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .section-label {
+      font-size: 0.75rem; letter-spacing: 0.2em;
+      text-transform: uppercase; color: var(--clay);
+      margin-bottom: 0.8rem;
+    }
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 3vw, 2.6rem);
+      margin-bottom: 1rem;
+    }
+    .section-desc {
+      color: rgba(245,239,230,0.6);
+      max-width: 56ch;
+      margin-bottom: 3rem;
+    }
+
+    .demo-frame-wrap {
+      position: relative;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      background: #100D0B;
+    }
+    .demo-frame-wrap::before {
+      content: 'LIVE DEMO';
+      position: absolute; top: 1rem; left: 1rem; z-index: 10;
+      font-size: 0.65rem; letter-spacing: 0.2em;
+      color: var(--clay); background: rgba(14,11,10,0.8);
+      padding: 0.25rem 0.6rem; border-radius: 2px;
+      border: 1px solid rgba(196,98,45,0.3);
+    }
+    .demo-frame-wrap iframe {
+      width: 100%; height: 680px;
+      border: none; display: block;
+    }
+
+    .demo-tip {
+      margin-top: 1.2rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .demo-tip::before { content: '💡'; }
+
+    /* ── MUDRAS GRID ── */
+    #mudras { padding: 6rem 3rem; }
+    .mudras-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 1px;
+      border: 1px solid var(--border);
+      margin-top: 3rem;
+    }
+    .mudra-card {
+      padding: 1.4rem 1.2rem;
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      transition: background 0.2s;
+      cursor: default;
+    }
+    .mudra-card:hover { background: rgba(212,168,67,0.04); }
+    .mudra-card-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.95rem;
+      color: var(--ivory);
+      margin-bottom: 0.2rem;
+    }
+    .mudra-card-meaning {
+      font-size: 0.72rem;
+      color: var(--muted);
+      letter-spacing: 0.03em;
+    }
+
+    /* ── HOW IT WORKS ── */
+    #how {
+      padding: 6rem 3rem;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3rem;
+      margin-top: 3.5rem;
+    }
+    .step-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem;
+      color: var(--border);
+      line-height: 1;
+      margin-bottom: 1rem;
+    }
+    .step-title {
+      font-size: 1rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      color: var(--gold);
+    }
+    .step-desc { font-size: 0.88rem; color: rgba(245,239,230,0.55); }
+
+    /* ── STATS ── */
+    .stats {
+      padding: 4rem 3rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .stat {
+      padding: 2rem;
+      border-right: 1px solid var(--border);
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val {
+      font-family: 'Playfair Display', serif;
+      font-size: 2.6rem;
+      color: var(--gold);
+      line-height: 1;
+      margin-bottom: 0.4rem;
+    }
+    .stat-label { font-size: 0.78rem; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+
+    /* ── FOOTER ── */
+    footer {
+      padding: 3rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .footer-logo {
+      font-family: 'Playfair Display', serif;
+      color: var(--gold); font-size: 1.1rem;
+    }
+    .footer-text { font-size: 0.78rem; color: var(--muted); }
+    .footer-link {
+      font-size: 0.78rem; color: var(--clay);
+      text-decoration: none;
+    }
+    .footer-link:hover { color: var(--gold); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      nav { padding: 1rem 1.5rem; }
+      .nav-links { gap: 1.5rem; }
+      .hero { grid-template-columns: 1fr; padding: 7rem 1.5rem 3rem; gap: 3rem; }
+      .hero-visual { order: -1; }
+      .mudra-ring { width: 220px; height: 220px; }
+      .mudra-emoji { font-size: 4.5rem; }
+      @keyframes orbit {
+        from { transform: rotate(0deg) translateX(108px); }
+        to   { transform: rotate(360deg) translateX(108px); }
+      }
+      #demo, #mudras, #how { padding: 4rem 1.5rem; }
+      .steps { grid-template-columns: 1fr; gap: 2rem; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat:nth-child(2) { border-right: none; }
+      footer { flex-direction: column; gap: 1rem; text-align: center; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .orbit-dot { animation: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Mudra AI</div>
+  <div class="nav-links">
+    <a href="#demo">Try It</a>
+    <a href="#mudras">Mudras</a>
+    <a href="#how">How It Works</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-text">
+    <div class="hero-eyebrow">Bharatanatyam · Classical Dance AI</div>
+    <h1 class="hero-title">Read the<br/><em>language</em><br/>of hands</h1>
+    <div class="hero-tamil">முத்திரை அறிவியல்</div>
+    <p class="hero-desc">
+      Real-time recognition of 45 Bharatanatyam mudras using MediaPipe hand landmarks and machine learning — no app download required.
+    </p>
+    <a href="#demo" class="hero-cta">Try the demo</a>
+  </div>
+  <div class="hero-visual">
+    <div class="mudra-ring">
+      <div class="orbit-dot"></div>
+      <div class="orbit-dot"></div>
+      <div class="orbit-dot"></div>
+      <div class="mudra-emoji">🤚</div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-val">45</div>
+    <div class="stat-label">Mudras recognised</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val">93%</div>
+    <div class="stat-label">Model accuracy</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val">32K+</div>
+    <div class="stat-label">Training samples</div>
+  </div>
+  <div class="stat">
+    <div class="stat-val">5.6 MB</div>
+    <div class="stat-label">Model size</div>
+  </div>
+</div>
+
+<!-- DEMO -->
+<section id="demo">
+  <div class="section-label">Live Demo</div>
+  <h2 class="section-title">Show your hand. See the mudra.</h2>
+  <p class="section-desc">
+    Allow camera access, hold your hand clearly in frame, and the model will identify the gesture in real time.
+  </p>
+  <div class="demo-frame-wrap">
+    <iframe
+      src="https://satyam12m-bharatanatyam-mudra-detector.hf.space"
+      title="Bharatanatyam Mudra Detector"
+      allow="camera;microphone"
+    ></iframe>
+  </div>
+  <p class="demo-tip">
+    Best results with good lighting and your hand centred in frame. Try Pathaka (flat open palm) or Trishulam (3 fingers up).
+  </p>
+</section>
+
+<!-- MUDRAS GRID -->
+<section id="mudras">
+  <div class="section-label">The Vocabulary</div>
+  <h2 class="section-title">45 gestures, one ancient language</h2>
+  <p class="section-desc">
+    Each mudra carries a specific meaning — a flower, an emotion, a deity, a narrative moment in dance.
+  </p>
+  <div class="mudras-grid" id="mudraGrid"></div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="section-label">Under the Hood</div>
+  <h2 class="section-title">How it works</h2>
+  <p class="section-desc">Three stages, running in real time.</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">Hand detection</div>
+      <div class="step-desc">MediaPipe locates your hand and extracts 21 landmarks — the joints and fingertips — as (x, y, z) coordinates.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">Feature extraction</div>
+      <div class="step-desc">Landmarks are normalised relative to the wrist, producing 63 scale-invariant features that describe hand shape alone.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">Classification</div>
+      <div class="step-desc">A Random Forest trained on 32,956 samples predicts the mudra and returns a confidence score in milliseconds.</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Mudra AI</div>
+  <div class="footer-text">Built by Satyam Kumar · Trained on Kaggle · Deployed on Hugging Face</div>
+  <a class="footer-link" href="https://huggingface.co/spaces/satyam12m/bharatanatyam-mudra-detector" target="_blank">
+    Open in Hugging Face →
+  </a>
+</footer>
+
+<script>
+  const mudras = [
+    { name: "Alapadmam",     meaning: "Blooming lotus" },
+    { name: "Anjali",        meaning: "Salutation / prayer" },
+    { name: "Aralam",        meaning: "Betel leaf" },
+    { name: "Ardhachandran", meaning: "Half moon" },
+    { name: "Ardhapathaka",  meaning: "Half flag" },
+    { name: "Berunda",       meaning: "Two-headed bird" },
+    { name: "Bramaram",      meaning: "Bumblebee" },
+    { name: "Chakra",        meaning: "Wheel / discus" },
+    { name: "Chandrakala",   meaning: "Crescent moon" },
+    { name: "Chaturam",      meaning: "Square / cleverness" },
+    { name: "Garuda",        meaning: "Eagle / Garuda bird" },
+    { name: "Hamsapaksha",   meaning: "Swan wing" },
+    { name: "Hamsasyam",     meaning: "Swan face" },
+    { name: "Kangulam",      meaning: "Small bird" },
+    { name: "Kapith",        meaning: "Wood apple" },
+    { name: "Kapotham",      meaning: "Dove / pigeon" },
+    { name: "Karkatta",      meaning: "Crab" },
+    { name: "Kartariswastika","meaning": "Crossed scissors" },
+    { name: "Katakamukha",   meaning: "Bracelet opening" },
+    { name: "Katakavardhana","meaning": "Bracelet growth" },
+    { name: "Katrimukha",    meaning: "Scissors face" },
+    { name: "Khatva",        meaning: "Cot / bed" },
+    { name: "Kilaka",        meaning: "Bond / link" },
+    { name: "Kurma",         meaning: "Tortoise" },
+    { name: "Matsya",        meaning: "Fish" },
+    { name: "Mayura",        meaning: "Peacock" },
+    { name: "Mrigasirsha",   meaning: "Deer face" },
+    { name: "Mukulam",       meaning: "Flower bud" },
+    { name: "Mushti",        meaning: "Fist / closed hand" },
+    { name: "Nagabandha",    meaning: "Snake bond" },
+    { name: "Padmakosha",    meaning: "Lotus bud" },
+    { name: "Pasha",         meaning: "Noose / bond" },
+    { name: "Pathaka",       meaning: "Flag / banner" },
+    { name: "Pushpaputa",    meaning: "Handful of flowers" },
+    { name: "Sakata",        meaning: "Carriage / cart" },
+    { name: "Samputa",       meaning: "Closed box" },
+    { name: "Sarpasirsha",   meaning: "Snake head" },
+    { name: "Shanka",        meaning: "Conch shell" },
+    { name: "Shivalinga",    meaning: "Shiva symbol" },
+    { name: "Shukatundam",   meaning: "Parrot beak" },
+    { name: "Sikharam",      meaning: "Peak / spire" },
+    { name: "Simhamukham",   meaning: "Lion face" },
+    { name: "Suchi",         meaning: "Needle / point" },
+    { name: "Trishulam",     meaning: "Trident" },
+    { name: "Varaha",        meaning: "Boar / Vishnu avatar" },
+  ];
+
+  const grid = document.getElementById('mudraGrid');
+  mudras.forEach(m => {
+    grid.innerHTML += `
+      <div class="mudra-card">
+        <div class="mudra-card-name">${m.name}</div>
+        <div class="mudra-card-meaning">${m.meaning}</div>
+      </div>`;
+  });
+</script>
+</body>
+</html>
