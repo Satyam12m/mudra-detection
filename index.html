@@ -1,117 +1,138 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Mudra AI — Fast Demo</title>
+<meta charset="UTF-8">
+<title>Mudra Detection</title>
 
-  <style>
-    body {
-      background: #0E0B0A;
-      color: #F5EFE6;
-      font-family: sans-serif;
-      text-align: center;
-      padding: 40px;
-    }
+<!-- ⚡ Preconnect for speed -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 
-    #demo-box {
-      border: 1px solid rgba(212,168,67,0.2);
-      padding: 20px;
-      margin-top: 30px;
-      border-radius: 8px;
-      background: #1A1410;
-    }
+<!-- TensorFlow -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
 
-    video {
-      width: 100%;
-      max-width: 500px;
-      border-radius: 8px;
-    }
+<style>
+  body {
+    margin: 0;
+    background: #0f172a;
+    color: white;
+    font-family: Arial;
+    text-align: center;
+  }
 
-    #loader {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #D4A843;
-    }
+  h1 {
+    margin: 15px;
+  }
 
-    #result {
-      margin-top: 20px;
-      font-size: 20px;
-      color: #D4A843;
-    }
+  #container {
+    position: relative;
+    display: inline-block;
+  }
 
-    button {
-      padding: 10px 20px;
-      margin-top: 20px;
-      background: #C4622D;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-  </style>
+  video, canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  #loader {
+    position: absolute;
+    width: 640px;
+    height: 480px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #0f172a;
+    font-size: 20px;
+    z-index: 10;
+  }
+
+  #result {
+    position: absolute;
+    bottom: 10px;
+    width: 100%;
+    font-size: 22px;
+    font-weight: bold;
+  }
+</style>
 </head>
 
 <body>
 
-  <h1>🪷 Mudra AI Live Demo</h1>
+<h1>🖐️ Mudra Detection</h1>
 
-  <button onclick="startDemo()">Start Camera</button>
+<div id="container">
+  <div id="loader">⚡ Preparing AI...</div>
 
-  <div id="demo-box">
-    <video id="video" autoplay playsinline></video>
-    <div id="loader">⏳ Loading AI model...</div>
-    <div id="result">Waiting...</div>
-  </div>
+  <video id="video" autoplay playsinline width="640" height="480"></video>
+  <canvas id="canvas" width="640" height="480"></canvas>
 
-  <!-- TensorFlow.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <div id="result">Loading...</div>
+</div>
 
-  <script>
-    let model;
-    let video = document.getElementById("video");
-    let result = document.getElementById("result");
-    let loader = document.getElementById("loader");
+<script>
+let model;
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const loader = document.getElementById("loader");
 
-    // 🚀 Load model ONCE
-    async function loadModel() {
-      await tf.setBackend('webgl'); // GPU acceleration
-      model = await tf.loadGraphModel("model/model.json"); // change path
-      loader.innerText = "✅ Model Loaded";
-    }
+// 🚀 LOAD MODEL FAST + WARMUP
+async function loadModelFast() {
+  await tf.setBackend('webgl');
+  await tf.ready();
 
-    loadModel();
+  model = await tf.loadLayersModel("model.json");
 
-    // 🎥 Start camera
-    async function startDemo() {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      video.srcObject = stream;
-      detect();
-    }
+  // 🔥 Warmup (critical for instant prediction)
+  const dummy = tf.zeros([1, 128, 128, 3]);
+  model.predict(dummy);
+  dummy.dispose();
 
-    // 🔥 Detection loop
-    async function detect() {
-      if (!model) {
-        requestAnimationFrame(detect);
-        return;
-      }
+  document.getElementById("result").innerText = "Model Ready ⚡";
+  loader.style.display = "none";
+}
 
-      const tensor = tf.browser.fromPixels(video)
-        .resizeNearestNeighbor([128, 128])
-        .toFloat()
-        .expandDims();
+// 🎥 START CAMERA
+async function startCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: { width: 640, height: 480 }
+  });
+  video.srcObject = stream;
+}
 
-      const prediction = await model.predict(tensor);
-      const data = prediction.dataSync();
+// ⚡ FAST PREDICTION LOOP
+function predictLoop() {
+  requestAnimationFrame(predictLoop);
 
-      // 👉 Replace with your labels
-      const labels = ["Mudra1", "Mudra2", "Mudra3"];
-      let maxIndex = data.indexOf(Math.max(...data));
+  if (!model) return;
 
-      result.innerText = "Detected: " + labels[maxIndex];
+  ctx.drawImage(video, 0, 0, 640, 480);
 
-      requestAnimationFrame(detect);
-    }
-  </script>
+  const tensor = tf.browser.fromPixels(video)
+    .resizeNearestNeighbor([128, 128]) // smaller = faster
+    .toFloat()
+    .div(255.0)
+    .expandDims();
+
+  const prediction = model.predict(tensor);
+  const data = prediction.dataSync();
+
+  const labels = ["Mudra1", "Mudra2", "Mudra3"];
+  const maxIndex = data.indexOf(Math.max(...data));
+
+  document.getElementById("result").innerText =
+    "Detected: " + labels[maxIndex];
+
+  tf.dispose([tensor, prediction]);
+}
+
+// 🚀 RUN EVERYTHING IN PARALLEL (KEY TO SPEED)
+loadModelFast();
+startCamera();
+predictLoop();
+
+</script>
 
 </body>
 </html>
